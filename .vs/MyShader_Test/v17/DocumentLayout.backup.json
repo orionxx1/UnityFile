@@ -1,0 +1,37 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "F:\\Unity\\Unity project\\MyShader_Test\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{838FB533-E68A-3CDA-9DB5-EB941902D5E1}|Assembly-CSharp.csproj|f:\\unity\\unity project\\myshader_test\\assets\\test\\shader test\\rain\\rain\\rianonwall.shader||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{838FB533-E68A-3CDA-9DB5-EB941902D5E1}|Assembly-CSharp.csproj|solutionrelative:assets\\test\\shader test\\rain\\rain\\rianonwall.shader||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 0,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "RianOnWall.shader",
+              "DocumentMoniker": "F:\\Unity\\Unity project\\MyShader_Test\\Assets\\Test\\Shader test\\Rain\\Rain\\RianOnWall.shader",
+              "RelativeDocumentMoniker": "Assets\\Test\\Shader test\\Rain\\Rain\\RianOnWall.shader",
+              "ToolTip": "F:\\Unity\\Unity project\\MyShader_Test\\Assets\\Test\\Shader test\\Rain\\Rain\\RianOnWall.shader",
+              "RelativeToolTip": "Assets\\Test\\Shader test\\Rain\\Rain\\RianOnWall.shader",
+              "ViewState": "AgIAAAAAAAAAAAAAAADwvwgAAAAIAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.002777|",
+              "WhenOpened": "2026-02-26T09:20:03.218Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

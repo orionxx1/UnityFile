@@ -9,3 +9,6 @@ Temp/FSTimeGet-cc60106192b85d24a84173cf9c569b20
 Temp/FSTimeGet-eedf690dbbea11a48a949ca4e3a3ca8d
 Temp/UnityLockfile
 Assets/LWGUI
+*.csproj
+AmplifyShaderEditor.csproj.user
+Assets/Package/LWGUI
