@@ -1,0 +1,158 @@
+// ======================================================================================
+//
+//               Bitonic Sorting (双调排序) Compute Shader
+//
+// 目的: 在GPU上对包含所有实例信息的_SortingData这个Buffer，根据距离进行高效的并行排序。
+//       排序是为了优化下一帧Culling阶段的内存访问性能。
+//
+// 核心思想: 
+// 1. "分而治之": 将大问题分解成许多可以并行解决的小问题。
+// 2. 双调序列: 一个先单调递增后单调递减（或反之）的特殊序列。
+//             双调排序的核心就是不断地将小段的有序序列，合并成更大的双调序列，
+//             然后再将这个双调序列排序成完全有序的序列。
+// 3. 矩阵转置: 当要排序的数据量超过一个线程组能处理的最大限度时（这里是256），
+//             通过巧妙的矩阵转置，可以把“列排序”问题转换成“行排序”问题，
+//             从而复用同一个排序Kernel，实现对超大数据量的排序。
+//
+// ======================================================================================
+
+#include "IndirectStructs.hlsl"
+// 定义排序的核心Kernel
+#pragma kernel BitonicSort
+// 定义矩阵转置的Kernel
+#pragma kernel MatrixTranspose
+// #pragma enable_d3d11_debug_symbols
+
+// --- 算法参数定义 ---
+
+// 每个线程组(Thread Group)包含256个线程。
+// 这意味着BitonicSort这个Kernel一次可以并行处理256个元素。
+#define BITONIC_BLOCK_SIZE 256
+// 矩阵转置时，使用8x8的线程块。
+// 8 * 8 = 64个线程。
+#define TRANSPOSE_BLOCK_SIZE 8
+
+cbuffer CB
+{
+    // 当前排序的“步长”或“跨度”。代表了当前正在比较的两个元素之间的距离。
+    // 它的值会是 2, 4, 8, 16 ... 一直到排序完成。
+    uint _Level; 
+    
+    // 一个掩码，用于决定当前是应该升序排还是降序排。
+    // 这是双调合并的关键，它能让一小组数据升序，相邻的另一小组数据降序，从而合并成一个更大的双调序列。
+    uint _LevelMask;
+    
+    // 当我们把一维的长数组想象成一个二维矩阵时，这个是矩阵的宽度。
+    // 用于MatrixTranspose Kernel计算二维地址。
+    uint _MatrixWidth;
+    // 矩阵的高度。
+    uint _MatrixHeight;
+}
+
+// 输入Buffer，仅在MatrixTranspose中使用。
+StructuredBuffer<SortingData> _Input;
+// 可读写的Buffer，是排序操作的主要对象。
+RWStructuredBuffer<SortingData> _Data;
+
+
+// ======================================================================================
+//
+//                          Kernel: BitonicSort (排序核心)
+//
+// ======================================================================================
+// 【设计要点: 共享内存 (Shared Memory)】
+// _SharedData是一个“共享内存”数组。它的速度比访问主显存(_Data)快得多。
+// 算法首先将一小组数据从主显存加载到高速的共享内存中，在共享内存中完成多次比较和交换，
+// 最后再将排好序的结果写回主显存。这极大地减少了慢速的显存访问次数。
+groupshared SortingData _SharedData[BITONIC_BLOCK_SIZE];
+
+// 指定此Kernel的线程组大小为256x1x1。
+[numthreads(BITONIC_BLOCK_SIZE, 1, 1)]
+void BitonicSort (
+        uint3 _dispatchThreadID : SV_DispatchThreadID, // 线程在整个Dispatch中的全局唯一ID (e.g., 0-4095)
+        uint  _groupIndex       : SV_GroupIndex,       // 线程在自己线程组内的局部ID (e.g., 0-255)
+        uint3 _groupID          : SV_GroupID,          // 线程组的ID (e.g., 0, 1, 2...)
+        uint3 _groupThreadID    : SV_GroupThreadID     // 与_groupIndex类似，但为3D形式
+    )
+{
+    // --- 1. 从主显存加载数据到高速共享内存 ---
+    uint tID = _dispatchThreadID.x; // 全局线程ID
+    uint GI = _groupIndex;          // 组内局部线程ID
+    _SharedData[GI] = _Data[tID];   // 每个线程负责把自己对应的数据搬到共享内存
+    
+    // 【同步点】GroupMemoryBarrierWithGroupSync()
+    // 这是一个“路障”。它强制一个线程组内的所有256个线程都必须执行到这里，
+    // 并且所有内存操作都完成后，才能继续往下走。
+    // 这里是为了确保_SharedData已经被完全填满了，才能开始排序。
+    GroupMemoryBarrierWithGroupSync();
+    
+    // --- 2. 在共享内存中进行多轮比较和交换 ---
+    // 这个循环是双调排序算法的核心。
+    // C#端会多次调用这个Kernel，每次传入不同的_Level值。
+    // 这里的内层for循环，是针对一个固定的_Level，进行更小步长的比较。
+    for (uint j = _Level >> 1; j > 0; j >>= 1)
+    {
+        // 每个线程先读取自己当前的值
+        SortingData result = _SharedData[GI];
+        uint t1 = GI & ~j;
+        uint t2 = GI | j;
+        SortingData inst1 = _SharedData[t1];//较小值
+        SortingData inst2 = _SharedData[t2];//较大值
+        
+        float dist1 = (inst1.drawCallInstanceIndex >> 16) * 5000 + inst1.distanceToCam;
+        float dist2 = (inst2.drawCallInstanceIndex >> 16) * 5000 + inst2.distanceToCam;
+
+
+        if ((dist1 <= dist2) == ((bool)(_LevelMask & tID)))//满足升序列小于，降序列大于
+        {
+            result = _SharedData[GI ^ j];//互换数值
+        }
+        
+        // 【同步点】等待所有线程都计算完自己是否需要交换。
+        GroupMemoryBarrierWithGroupSync();
+        
+        // 所有线程同时将交换后的结果写回共享内存
+        _SharedData[GI] = result;
+        
+        // 【同步点】等待所有人都写完了，才能进行下一轮更小步长的比较。
+        GroupMemoryBarrierWithGroupSync();
+        
+    // --- 3. 将排好序的结果写回主显存 ---
+        _Data[tID] = _SharedData[GI];
+    }
+}
+
+
+// ======================================================================================
+//
+//                       Kernel: MatrixTranspose (矩阵转置)
+//
+// ======================================================================================
+// 【目的】当需要排序的数据量大于256时，我们把它看成一个 N x 256 的矩阵。
+//        我们已经用BitonicSort对每一“行”进行了排序。
+//        现在，我们需要对“列”进行排序。但是我们的排序核是按行设计的。
+//        所以，我们先把矩阵“转置”（行列互换），这样原来的“列”就变成了新的“行”，
+//        然后我们就可以再次调用BitonicSort对它进行排序了！
+// ======================================================================================
+groupshared SortingData _SharedTransposeData[TRANSPOSE_BLOCK_SIZE * TRANSPOSE_BLOCK_SIZE];
+[numthreads(TRANSPOSE_BLOCK_SIZE, TRANSPOSE_BLOCK_SIZE, 1)]
+void MatrixTranspose(
+        in uint3 _dispatchThreadID : SV_DispatchThreadID,
+        in uint  _groupIndex       : SV_GroupIndex,
+        in uint3 _groupID          : SV_GroupID,
+        in uint3 _groupThreadID    : SV_GroupThreadID
+    )
+{
+    // --- 1. 从输入矩阵加载一个8x8的小块到共享内存 ---
+    uint3 tID = _dispatchThreadID;
+    uint3 GTID = _groupThreadID;
+    uint GI = _groupIndex;
+    _SharedTransposeData[GI] = _Input[tID.y * _MatrixWidth + tID.x];
+    
+    // 【同步点】确保8x8的小块数据都已加载完毕
+    GroupMemoryBarrierWithGroupSync();
+
+    uint2 XY = tID.yx - GTID.yx + GTID.xy;
+    // 写入到输出Buffer
+    _Data[XY.y * _MatrixHeight + XY.x] = _SharedTransposeData[GTID.x * TRANSPOSE_BLOCK_SIZE + GTID.y];
+}

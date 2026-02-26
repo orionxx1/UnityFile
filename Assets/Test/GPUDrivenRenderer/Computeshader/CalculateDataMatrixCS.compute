@@ -1,0 +1,141 @@
+﻿// Calculate Data Matrix (预计算M矩阵) Compute Shader
+// 目的: 
+// 这是一个【仅在初始化时执行一次】的Compute Shader。
+// 它的唯一任务是，读取所有实例的变换信息（位置Position, 旋转Rotation, 缩放Scale），
+// 在GPU上并行地为每一个实例计算出其最终的Object-to-World矩阵（即M矩阵），
+// 并将结果存储到一个巨大的“数据库”Buffer中，供后续所有帧使用。
+//
+// 核心思想: 
+// 【预计算优化】。在CPU中用C#计算数百万个矩阵会非常慢。而在运行时，如果每帧都让
+// Vertex Shader去动态计算M矩阵，也会带来重复的开销。
+// 所以，最聪明的办法就是在初始化时，利用GPU强大的并行计算能力，一次性把所有
+// M矩阵都算好并存起来。这是一个典型的“以空间换时间”的优化策略。
+
+// 新增部分：
+// 计算实例对应的区块ID
+
+
+#define THREAD_GROUP_SIZE_X 64 
+#include "IndirectStructs.hlsl" // 引用结构体定义
+#pragma kernel CSMain // 定义主内核
+
+
+// 【输入】从C#端上传的、包含所有实例变换信息的Buffer。
+StructuredBuffer<float3> _Position; // 所有实例的位置
+StructuredBuffer<float3> _Rotation; // 所有实例的欧拉角旋转 (in degrees)
+StructuredBuffer<float>  _Scale;    // 所有实例的统一缩放值
+
+// 【输出】用于存储计算结果的Buffer。
+RWStructuredBuffer<float4x4> _LocalToWorldMatrixsBuffer;    // 这个Buffer会成为一个只读的“M矩阵数据库”。
+
+
+
+// 【新增】=======================================================
+// 【输入】区块信息 (由C#在初始化时传入)
+cbuffer Params 
+{
+    uint _NumChunks;
+};
+StructuredBuffer<uint2> _ChunkInfos;
+// 【输出】每个实例对应的区块ID
+RWStructuredBuffer<uint> _InstanceChunkIDs; 
+// ===============================================================
+
+
+// 辅助函数: 从一个轴和一个角度，构建一个旋转矩阵。    这是标准的“轴角旋转”公式。
+float4x4 rotationMatrix(float3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return float4x4(
+        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,  0.0,
+        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,  0.0,
+        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c,           0.0,
+        0,                                  0,                                  0,                                  1.0
+    );
+}
+
+
+
+// ==================================================
+//           Kernel: CSMain (主执行函数)
+// ==================================================
+[numthreads(THREAD_GROUP_SIZE_X, 1, 1)]
+void CSMain (uint3 _dispatchThreadID : SV_DispatchThreadID)
+{
+    // --- 1. 获取当前线程ID ---
+    // tID是当前线程在整个Dispatch中的全局唯一ID (e.g., 0, 1, 2... up to _ItemCount-1)
+    uint tID = _dispatchThreadID.x;
+
+    // --- 2. 从输入Buffer中读取当前实例的TRS数据 ---
+    float3 position = _Position[tID];
+    float3 rotation = _Rotation[tID];       // rotation是欧拉角，单位是度(degree)，需要转为弧度(radian)才能用于sin/cos计算。
+    float3 scale = float3(1, 1, 1) * _Scale[tID]; // 将统一缩放值扩展为float3
+
+    // --- 3. 构建旋转矩阵 (Rotation Matrix) ---
+    // 分别计算绕X, Y, Z轴的旋转矩阵。
+    // 注意：这里的旋转顺序是 Y -> Z -> X。这是一种常见的旋转顺序，但具体的顺序
+    // 取决于建模软件的导出设置或项目约定。
+    float4x4 xRotationMatrix = rotationMatrix(float3(1, 0, 0), radians(rotation.x));
+    float4x4 yRotationMatrix = rotationMatrix(float3(0, 1, 0), radians(rotation.y));
+    float4x4 zRotationMatrix = rotationMatrix(float3(0, 0, 1), radians(rotation.z));
+    
+    // 将三个旋转矩阵相乘，得到最终的组合旋转矩阵。
+    // 矩阵乘法不满足交换律，顺序很重要。
+    float4x4 rotMatrix = mul(yRotationMatrix, mul(zRotationMatrix, xRotationMatrix));
+
+    // --- 4. 构建TRS矩阵的T*S部分 ---
+    // 这里没有直接构建一个平移矩阵和一个缩放矩阵再相乘，
+    // 而是直接构建了一个已经组合了“缩放”和“平移”的矩阵。
+    // 矩阵的前三列是缩放后的基向量，第四列是平移向量。
+    float4x4 trsMatrix = {
+        scale.x, 0,       0,       position.x,
+        0,       scale.y, 0,       position.y,
+        0,       0,       scale.z, position.z,
+        0,       0,       0,       1
+    };
+
+    // --- 5. 计算最终的Object-to-World矩阵 ---
+    // 最终的M矩阵 = 平移(T) * 旋转(R) * 缩放(S)。
+    // 由于矩阵乘法是从右向左结合的，所以这里的计算顺序是：
+    // objectToWorld * vertex = (trsMatrix * rotMatrix) * vertex
+    // 这意味着先对顶点进行旋转(rotMatrix)，再进行缩放和平移(trsMatrix)。
+    // 这与Unity标准的 T*R*S 顺序是一致的。
+    float4x4 objectToWorld = mul(trsMatrix, rotMatrix);
+
+    // --- 6. 并行写入结果 ---
+    // 每个线程写入的位置由它自己的ID唯一确定，不会产生写入冲突。
+    _LocalToWorldMatrixsBuffer[tID] = objectToWorld;
+
+
+    // ==================================================================
+    // 【第2部分：新增的区块ID计算逻辑】
+    // ==================================================================
+    uint chunkID = 0;
+    if (_NumChunks > 0)
+    {
+        // 使用二分查找，根据实例ID(tID)确定其所属的区块ID
+        uint min_idx = 0;
+        uint max_idx = _NumChunks - 1;
+        
+        while (min_idx <= max_idx)
+        {
+            uint mid_idx = min_idx + (max_idx - min_idx) / 2;
+            uint2 chunkInfo = _ChunkInfos[mid_idx]; // .x=startIndex, .y=count
+            
+            if (tID < chunkInfo.x){
+                max_idx = mid_idx - 1;
+            }
+            else{
+                chunkID = mid_idx;
+                min_idx = mid_idx + 1;
+            }
+        }
+    }
+    // 将计算出的区块ID写入新的输出Buffer
+    _InstanceChunkIDs[tID] = chunkID;
+
+}

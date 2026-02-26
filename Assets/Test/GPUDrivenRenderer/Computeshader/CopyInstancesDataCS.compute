@@ -1,0 +1,95 @@
+#include "IndirectStructs.hlsl"
+
+#pragma kernel CSMain
+
+#define THREAD_GROUP_SIZE_X 256
+#define THREAD_GROUP_SIZE_Y 1
+#define THREAD_GROUP_SIZE_Z 1
+
+#define VEGDATA_NUM 3
+
+cbuffer CB
+{
+    uint _VegDataMapRes;
+    uint _NumOfDrawcalls;
+}
+
+StructuredBuffer<SortingData> _SortingData;
+RWStructuredBuffer<uint> _ArgsBuffer;
+StructuredBuffer<float4x4> _LocalToWorldMatrixsBuffer;
+StructuredBuffer<uint> _IsVisibleBuffer;
+StructuredBuffer<uint> _GroupSumArray;
+StructuredBuffer<uint> _ScannedInstanceVisibleBuffer;
+
+RWTexture2D<float4> _VegDataMap;
+
+float4 EncodeFloatRGBAFloat(float4 v)
+{
+    uint4 i = asuint(v);
+    float4 val = (i & 0xFFFFFFFF) / 4294967295.0;
+    return val;
+}
+
+float4 DecodeFloatRGBAFloat(float4 rgba)
+{
+    uint4 value = uint4(rgba * 4294967295.0);
+    return asfloat(value);
+}
+
+[numthreads(THREAD_GROUP_SIZE_X,THREAD_GROUP_SIZE_Y,THREAD_GROUP_SIZE_Z)]
+void CSMain (
+        in uint3 _dispatchThreadID : SV_DispatchThreadID,
+        in uint  _groupIndex       : SV_GroupIndex,
+        in uint3 _groupID          : SV_GroupID,
+        in uint3 _groupThreadID    : SV_GroupThreadID
+    )
+{
+    uint tID = _dispatchThreadID.x;
+    uint groupID = _groupID.x;
+    uint groupSum = _groupID.x > 0 ? _GroupSumArray[_groupID.x] : 0;
+
+    if (_IsVisibleBuffer[tID] == 1)
+    {
+        uint instanceIndex = _ScannedInstanceVisibleBuffer[tID] + groupSum;
+        uint index = _SortingData[tID].drawCallInstanceIndex & 0xFFFF;
+        
+        float4x4 objectToWorld = _LocalToWorldMatrixsBuffer[index];
+        
+        float4 row1 = objectToWorld[0];
+        float4 row2 = objectToWorld[1];
+        float4 row3 = objectToWorld[2];
+        row1 = EncodeFloatRGBAFloat(row1);
+        row2 = EncodeFloatRGBAFloat(row2);
+        row3 = EncodeFloatRGBAFloat(row3);
+
+        int2 dataID;
+        dataID.x = instanceIndex * VEGDATA_NUM % _VegDataMapRes;
+        dataID.y = instanceIndex * VEGDATA_NUM / _VegDataMapRes;
+#if UNITY_UV_STARTS_AT_TOP
+        dataID.y = _VegDataMapRes - dataID.y;
+#endif
+        _VegDataMap[dataID] = row1;
+
+        dataID.x = (instanceIndex * VEGDATA_NUM + 1) % _VegDataMapRes;
+        dataID.y = (instanceIndex * VEGDATA_NUM + 1) / _VegDataMapRes;
+#if UNITY_UV_STARTS_AT_TOP
+        dataID.y = _VegDataMapRes - dataID.y;
+#endif
+        _VegDataMap[dataID] = row2;
+
+        dataID.x = (instanceIndex * VEGDATA_NUM + 2) % _VegDataMapRes;
+        dataID.y = (instanceIndex * VEGDATA_NUM + 2) / _VegDataMapRes;
+#if UNITY_UV_STARTS_AT_TOP
+        dataID.y = _VegDataMapRes - dataID.y;
+#endif
+        _VegDataMap[dataID] = row3;
+    }
+
+    if ((tID == 0) * (groupID == 0))
+    {
+        for (uint k = 1; k < _NumOfDrawcalls; k++)
+        {
+            _ArgsBuffer[k * 5 + 4] = _ArgsBuffer[(k - 1) * 5 + 4] + _ArgsBuffer[(k - 1) * 5 + 1];
+        }
+    }
+}

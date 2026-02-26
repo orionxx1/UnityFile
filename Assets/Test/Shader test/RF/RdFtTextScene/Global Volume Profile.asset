@@ -1,0 +1,502 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-7629820379908148680
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 0
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 1.6
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 0.24842751, b: 0.24842751, a: 1}
+--- !u!114 &-5663379993075586305
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MouHu_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MouHu_Volume
+  active: 0
+  blurRange:
+    m_OverrideState: 1
+    m_Value: 1.09
+  loopCount:
+    m_OverrideState: 1
+    m_Value: 8
+  x:
+    m_OverrideState: 1
+    m_Value: 0.466
+  y:
+    m_OverrideState: 1
+    m_Value: 0.5
+  downSample:
+    m_OverrideState: 1
+    m_Value: 1
+--- !u!114 &-4397804175656453463
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RadialBlurVolume
+  m_EditorClassIdentifier: Assembly-CSharp::RadialBlurVolume
+  active: 1
+  blurRange:
+    m_OverrideState: 1
+    m_Value: 5.41
+  loopCount:
+    m_OverrideState: 1
+    m_Value: 4
+  x:
+    m_OverrideState: 1
+    m_Value: 0.5
+  y:
+    m_OverrideState: 1
+    m_Value: 0.5
+  downSample:
+    m_OverrideState: 1
+    m_Value: 1
+--- !u!114 &-2861654879924902945
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 0.2
+  StepTime:
+    m_OverrideState: 1
+    m_Value: 4
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 0.83962256, g: 0.9349596, b: 1, a: 1}
+--- !u!114 &-1772828976117398762
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 0
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
+  m_Name: Global Volume Profile
+  m_EditorClassIdentifier: 
+  components:
+  - {fileID: 6968025470201630037}
+  - {fileID: 1493084433155799523}
+--- !u!114 &21751531519876973
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MouHu_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MouHu_Volume
+  active: 1
+  blurRange:
+    m_OverrideState: 1
+    m_Value: 2.48
+  loopCount:
+    m_OverrideState: 1
+    m_Value: 4
+  x:
+    m_OverrideState: 1
+    m_Value: 0.5
+  y:
+    m_OverrideState: 1
+    m_Value: 0.5
+  downSample:
+    m_OverrideState: 1
+    m_Value: 1
+--- !u!114 &1493084433155799523
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MuBan_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MuBan_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 0.16
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &2613522418947691172
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 1.5
+  StepTime:
+    m_OverrideState: 1
+    m_Value: 8
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &3199190723044381452
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 1
+  <displayName>k__BackingField: 
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  StepTime:
+    m_OverrideState: 1
+    m_Value: 12
+  BlurOffset:
+    m_OverrideState: 1
+    m_Value: 1.57
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value:
+      r: 1
+      g: 1
+      b: 1
+      a: 1
+--- !u!114 &3735932956451943041
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumeLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumeLight_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 2
+  StepTime:
+    m_OverrideState: 1
+    m_Value: 12
+  BlurOffset:
+    m_OverrideState: 1
+    m_Value: 2.25
+  VolumeColor:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &4069736239151488377
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  StepTime:
+    m_OverrideState: 1
+    m_Value: 17
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &6270944548269462468
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MuBan_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MuBan_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 0.16666657, b: 0.16666657, a: 1}
+--- !u!114 &6321539452052387142
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 1
+  StepTime:
+    m_OverrideState: 1
+    m_Value: 12
+  BlurOffset:
+    m_OverrideState: 1
+    m_Value: 1.5
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &6885644937771717732
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_VolumetricLight_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_VolumetricLight_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 1.25
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &6949368514032528571
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MouHu_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MouHu_Volume
+  active: 0
+  blurRange:
+    m_OverrideState: 1
+    m_Value: 1.1
+  loopCount:
+    m_OverrideState: 1
+    m_Value: 8
+  x:
+    m_OverrideState: 1
+    m_Value: 0.5
+  y:
+    m_OverrideState: 1
+    m_Value: 0.5
+  downSample:
+    m_OverrideState: 1
+    m_Value: 1
+--- !u!114 &6968025470201630037
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5daa3812f4de64742b99926275e120ad, type: 3}
+  m_Name: RF_VolumeLight_Volume
+  m_EditorClassIdentifier: 
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  Intensity:
+    m_OverrideState: 1
+    m_Value: 1.1
+  StepTime:
+    m_OverrideState: 1
+    m_Value: 12
+  StepSize:
+    m_OverrideState: 1
+    m_Value: 0.15
+  BlurOffset:
+    m_OverrideState: 1
+    m_Value: 1.5
+  VolumeColor:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &7470613561693776859
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MuBan_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MuBan_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  IntParameter:
+    m_OverrideState: 0
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 0.48742133, b: 0.48742133, a: 1}
+--- !u!114 &8205586337751224908
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MouHu_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MouHu_Volume
+  active: 0
+  blurRange:
+    m_OverrideState: 1
+    m_Value: 1.97
+  loopCount:
+    m_OverrideState: 1
+    m_Value: 3
+  x:
+    m_OverrideState: 0
+    m_Value: 0.5
+  y:
+    m_OverrideState: 0
+    m_Value: 0.5
+  downSample:
+    m_OverrideState: 0
+    m_Value: 1

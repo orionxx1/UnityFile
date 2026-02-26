@@ -1,0 +1,141 @@
+﻿// ======================================================================================
+//
+//        Scan Visible Group Sum (扫描可见组总和) Compute Shader
+//
+// 目的: 
+// 这是两步并行前缀和算法的【第二步】。
+// 在第一步(scanVisInstancesCS)中，我们已经计算出了【每个线程组内】有多少个可见实例，
+// 并把这些“组总和”存入了 _GroupSumArray 这个Buffer中。
+//
+// 这个Shader的任务就是，对这个存满了“组总和”的 _GroupSumArray Buffer，再进行一次前缀和计算。
+//
+// 举例:
+// - 输入 _GroupSumArray: [10, 5, 20, 8, ...] (组0有10个可见, 组1有5个, 组2有20个...)
+// - 输出 _GroupSumArrayOut: [0, 10, 15, 35, ...] (组0的起始偏移是0, 组1是10, 组2是10+5=15, 组3是15+20=35...)
+//
+// 这个输出的“组起始偏移”数组，将和第一步输出的“组内偏移”数组一起，
+// 共同决定每个可见实例在最终紧凑列表里的精确位置。
+//
+// 核心思想: 
+// 【分而治之】。将一个巨大的前缀和问题，分解成“先算小组内部，再算小组之间”的两步，
+// 从而可以用有限的共享内存和并行线程，处理任意大小的数据。这个Shader处理的就是“小组之间”的计算。
+//
+// 使用的算法: Blelloch Scan (一种经典的并行前缀和算法), 分为Reduction和Down-Sweep两个阶段。
+//
+// ======================================================================================
+
+#pragma kernel CSMain
+
+// --- Kernel配置 ---
+#define THREAD_GROUP_SIZE_X 256 // 这个Kernel通常只用一个线程组来处理，但设计上是可扩展的
+// ...
+
+// --- C#传入的参数 ---
+cbuffer CB
+{
+    // C#端会传入线程组的总数（并且会向上扩展到2的幂）。
+    int _NumOfGroups;
+    
+    // 【高速缓存】使用共享内存来执行计算，避免频繁读写慢速的全局显存。
+    // 大小是线程组大小的两倍，因为每个线程要处理两个元素。
+    groupshared uint temp[2 * THREAD_GROUP_SIZE_X];
+}
+
+// --- 输入/输出 Buffer ---
+
+// 【输入】: 由上一步(scanVisInstancesCS)生成的，包含每个线程组可见实例总数的数组。
+StructuredBuffer<uint> _GroupSumArray;
+// 【输出】: 包含每个线程组起始偏移量的前缀和结果。
+RWStructuredBuffer<uint> _GroupSumArrayOut;
+
+
+// ======================================================================================
+//
+//                          Kernel: CSMain (主执行函数)
+//
+// ======================================================================================
+[numthreads(THREAD_GROUP_SIZE_X, 1, 1)]
+void CSMain (
+        in uint3 _dispatchThreadID : SV_DispatchThreadID,
+        in uint  _groupIndex       : SV_GroupIndex,
+        in uint3 _groupID          : SV_GroupID,
+        in uint3 _groupThreadID    : SV_GroupThreadID
+    )
+{
+    int tID = (int)_dispatchThreadID.x;      // 线程全局ID
+    int groupTID = (int)_groupThreadID.x; // 线程在组内的ID (0-255)
+
+    // --- 1. 从主显存加载数据到高速共享内存 ---
+    // 每个线程负责加载两个元素。
+    // 这样做是为了最大化利用内存带宽，是并行算法中常见的优化技巧。
+    int offset = 1;
+    temp[2 * groupTID]     = _GroupSumArray[2 * tID];
+    temp[2 * groupTID + 1] = _GroupSumArray[2 * tID + 1];
+    
+    // --- 2. 【阶段一: Reduction (归约) / Up-Sweep (上扫)】 ---
+    // 这个阶段的目标是，像构建一棵树一样，自底向上地计算出部分和。
+    // 最终，树的根节点（数组的最后一个元素）将包含所有元素的总和。
+    //
+    // 循环过程 (d代表了当前层级节点间的距离):
+    // d=N/2: 相邻的两个元素相加
+    // d=N/4: 间隔为2的元素相加
+    // ...
+    int d;
+    for (d = _NumOfGroups >> 1; d > 0; d >>= 1)
+    {
+        // 同步点: 确保上一轮的所有加法都已完成，并且结果已写入共享内存。
+        GroupMemoryBarrierWithGroupSync();
+
+        // 只让一部分线程工作，避免重复计算。
+        if (groupTID < d)
+        {
+            // 计算要访问的两个源元素的索引
+            int ai = offset * (2 * groupTID + 1) - 1;
+            int bi = offset * (2 * groupTID + 2) - 1;
+            // 将左侧节点的值，加到右侧节点上
+            temp[bi] += temp[ai];
+        }
+        offset *= 2;
+    }
+
+    // --- 3. 【清零根节点】 ---
+    // 在前缀和算法中，第一个元素的输出应该是0。
+    // 在Blelloch算法中，这通过将归约树的根节点（也就是总和）清零来实现。
+    // 只有第一个线程执行这个操作。
+    if (tID == 0)
+    {
+        temp[_NumOfGroups - 1] = 0;
+    }
+    
+    // --- 4. 【阶段二: Prefix Sum (前缀和) / Down-Sweep (下扫)】 ---
+    // 这个阶段的目标是，自顶向下地遍历这棵树，将父节点的值传递给子节点，
+    // 从而计算出每个元素的最终前缀和。
+    for (d = 1; d < _NumOfGroups; d *= 2)
+    {
+        offset >>= 1;
+        
+        // 同步点: 确保上一轮的交换已完成。
+        GroupMemoryBarrierWithGroupSync();
+    
+        if (tID < d)
+        {
+            // 计算要访问的左右两个子节点的索引
+            int ai = offset * (2 * groupTID + 1) - 1;
+            int bi = offset * (2 * groupTID + 2) - 1;
+            
+            // 交换左右两个子节点的值，并将左子节点的值加到右子节点上。
+            // 这是Down-Sweep阶段的核心操作。
+            int t = temp[ai];
+            temp[ai] = temp[bi];
+            temp[bi] += t;
+        }
+    }
+
+    // --- 5. 将最终结果写回主显存 ---
+    // 同步点: 确保所有计算都已完成。
+    GroupMemoryBarrierWithGroupSync();
+    
+    // 每个线程负责将共享内存中计算好的两个结果，写回到全局的输出Buffer。
+    _GroupSumArrayOut[2 * tID] = temp[2 * tID];
+    _GroupSumArrayOut[2 * tID + 1] = temp[2 * tID + 1];
+}

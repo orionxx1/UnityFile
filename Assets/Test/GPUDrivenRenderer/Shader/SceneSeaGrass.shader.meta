@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: 063516246d6a1eb4aa00710b3b70292e
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures:
+  - _MainTex: {instanceID: 0}
+  - _CombinedAO: {fileID: 2800000, guid: 0bbfb2c75b33c2448a9287a1f7ba1683, type: 3}
+  - _EmissionTexture: {instanceID: 0}
+  - _BumpMap: {instanceID: 0}
+  - _BumpMap2: {instanceID: 0}
+  - _ReflectionTex: {instanceID: 0}
+  - _DirtTex: {instanceID: 0}
+  - _DirtBumpMap: {instanceID: 0}
+  - _TopTex: {instanceID: 0}
+  - _TopBumpMap: {instanceID: 0}
+  - _DissolveMask: {instanceID: 0}
+  - _RampMask: {instanceID: 0}
+  nonModifiableTextures: []
+  preprocessorOverride: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

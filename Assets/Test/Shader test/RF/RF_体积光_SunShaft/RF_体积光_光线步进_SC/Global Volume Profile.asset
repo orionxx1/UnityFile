@@ -1,0 +1,157 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-6242883136352617402
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_MuBan_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_MuBan_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 0.73
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &-5256049939674742691
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_SunShaft_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_SunShaft_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+--- !u!114 &-3251907352096010149
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_SunShaft_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_SunShaft_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 0.989
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 5
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &-2114816740092299468
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_SunShaft_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_SunShaft_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 0.348
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}
+--- !u!114 &-132109721277914270
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_SunShaft_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_SunShaft_Volume
+  active: 0
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 0.066037595, b: 0.066037595, a: 1}
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7fd9488000d3734a9e00ee676215985, type: 3}
+  m_Name: Global Volume Profile
+  m_EditorClassIdentifier: 
+  components:
+  - {fileID: -5256049939674742691}
+--- !u!114 &1490420011318820195
+MonoBehaviour:
+  m_ObjectHideFlags: 3
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: RF_SunShaft_Volume
+  m_EditorClassIdentifier: Assembly-CSharp::RF_SunShaft_Volume
+  active: 1
+  IsEnabled:
+    m_OverrideState: 1
+    m_Value: 1
+  FloatParameter:
+    m_OverrideState: 1
+    m_Value: 0.472
+  IntParameter:
+    m_OverrideState: 1
+    m_Value: 1
+  ColorParameter:
+    m_OverrideState: 1
+    m_Value: {r: 1, g: 1, b: 1, a: 1}

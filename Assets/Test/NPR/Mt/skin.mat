@@ -1,0 +1,165 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: skin
+  m_Shader: {fileID: 4800000, guid: 2c6d6c98b403ebf4286aed7558619caf, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _OUTLINE_ON
+  m_InvalidKeywords:
+  - _A
+  - _Blend
+  - _ISEYE_OFF
+  - _ISFACE_OFF
+  - _ISHAIR_OFF
+  - _ZWRITE_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 2800000, guid: 795aa5b8530e945489ecb169660167b9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _EmissionMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _LinearRamp:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MaskMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MatCap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 2800000, guid: da1717cc1c87345418daca4d97659ac8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OtherMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _OtherMapp:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RampMap:
+        m_Texture: {fileID: 2800000, guid: 7ae79921c36b02b48b98001c292869b8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _sRGBRamp:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - Group3: 0
+    - _AlphaClip: 0
+    - _AlphaFactor: 1
+    - _AlphaToMask: 0
+    - _Blend: 0
+    - _BlendMode: 0
+    - _BlendModePreserveSpecular: 1
+    - _CullMode: 2
+    - _Cutoff: 0
+    - _DepthShadowScale: 2
+    - _DstBlend: 0
+    - _DstBlendAlpha: 0
+    - _EmissionScale: 1.5
+    - _EnvironmentReflections: 1
+    - _EyeHeightScale: -0.1
+    - _FaceForward: 0
+    - _FaceRight: 0
+    - _FaceShadowSmooth: 0
+    - _Factor: 1
+    - _FinierPow: 2.69
+    - _Group1: 0
+    - _Group2: 0
+    - _HairScale: 0
+    - _HairSpeRange: 0
+    - _HairSpeculerScale: 1
+    - _HeightScale: 0.005
+    - _IsEye: 0
+    - _IsFace: 0
+    - _IsHair: 0
+    - _M: 0
+    - _MT: 0
+    - _MainT: 0
+    - _MatCapIntensity: 0
+    - _MatCapMode: 0
+    - _MatCapScale: 0
+    - _Metallic: 0
+    - _MetallicDef: 0
+    - _NormalScale: 1
+    - _OcclusionScale: 1
+    - _OutlineColorBLend: 0.5
+    - _OutlineOn: 1
+    - _OutlineWidth: 0.25
+    - _PresetGroup: 0
+    - _QueueOffset: 0
+    - _RampScale: 0.2
+    - _ReceiveShadows: 1
+    - _Rim: 0
+    - _RimMax: 1
+    - _RimOffset: 10
+    - _RimScale: 2
+    - _RimThreshold: 1
+    - _Roughness: 0
+    - _RoughnessDef: 0.7
+    - _ScaleOfMult: 0
+    - _ShadowSmooth: 3
+    - _Smoothness: 0
+    - _SmoothnessDef: 0.1
+    - _SpecularHighlights: 1
+    - _SpeculerScale: 0
+    - _SrcBlend: 1
+    - _SrcBlendAlpha: 1
+    - _StencilComp: 0
+    - _StencilFail: 0
+    - _StencilID: 1
+    - _StencilOp: 0
+    - _StencilSet: 0
+    - _Surface: 0
+    - _ZOffset: 0.12
+    - _ZWrite: 1
+    m_Colors:
+    - _BaseColor: {r: 1, g: 0.9272, b: 0.87, a: 0}
+    - _CheekCor: {r: 1, g: 1, b: 1, a: 0}
+    - _EmissionColor: {r: 1, g: 1, b: 1, a: 0}
+    - _EyeSpeCol: {r: 0.51234114, g: 0.833765, b: 0.98742133, a: 0.23529412}
+    - _FaceForward: {r: -0.08345091, g: 0.014994008, b: -0.99639946, a: 0}
+    - _FaceRight: {r: -0.99374884, g: 0.07316121, b: 0.08432986, a: 0}
+    - _FinierColor: {r: 0.64705884, g: 0.44156688, b: 0.33333325, a: 0.54509807}
+    - _ForntCor: {r: 1, g: 1, b: 1, a: 0}
+    - _ForwardCor: {r: 1, g: 1, b: 1, a: 0}
+    - _FrontColor: {r: 1, g: 1, b: 1, a: 1}
+    - _MatCapColor: {r: 1, g: 1, b: 1, a: 0}
+    - _OutLineColor: {r: 0.66666657, g: 0.378792, b: 0.14465398, a: 0.7490196}
+    - _SSSCor: {r: 1, g: 0.88, b: 0.8, a: 0}
+    - _ShadowColor: {r: 0.7058824, g: 0.7647059, b: 0.7647059, a: 0}
+    - _ShallowFadeCor: {r: 0.6, g: 0.6, b: 0.6, a: 0}
+    - _SpecularColor: {r: 1, g: 1, b: 1, a: 0}
+  m_BuildTextureStacks: []

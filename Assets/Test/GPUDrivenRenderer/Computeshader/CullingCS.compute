@@ -1,0 +1,260 @@
+﻿#include "Assets/Test/GPUDrivenRenderer/Computeshader/IndirectStructs.hlsl"
+
+#pragma kernel CSMain
+#pragma kernel CullChunks
+#define THREAD_GROUP_SIZE_X 64
+#define THREAD_GROUP_SIZE_Y 1
+#define THREAD_GROUP_SIZE_Z 1
+#define VEGDATA_NUM 3
+
+cbuffer CB
+{
+    uint _FrustumCull_On;
+    uint _LodCull_On;
+    float _MaxDrawDistance;
+
+    float3 _CamPosition;
+    float _CamFieldOfView;
+    float4x4 _UNITY_MATRIX_V;
+    float4x4 _UNITY_MATRIX_P;
+    float _ShadowDistance;
+    int _NumChunks; // 区块总数，由C#传入
+}
+
+
+// 视锥平面数据
+cbuffer FrustumPlanesCB
+{
+    float4 _FrustumPlanes[6];
+};
+
+// AABB 结构体定义 (如果你的 IndirectStructs.hlsl 里没有的话)
+struct AABB 
+{
+    float3 center;
+    float3 extents;
+};
+
+
+// 【新增】Buffer定义
+StructuredBuffer<uint> _InstanceChunkIDs;
+
+
+// --- 实例数据库 ---
+StructuredBuffer<float4x4> _LocalToWorldMatrixsBuffer; // 所有实例的M矩阵
+
+// --- 原型数据库 ---
+StructuredBuffer<InstanceData> _InstanceBoundsDataBuffer; // 每种原型的局部包围盒
+StructuredBuffer<LodViewRatio> _LodViewRatioBuffer;     // 每种原型的LOD切换距离
+StructuredBuffer<uint> _InstanceCastShadowBuffer;       // 每种原型是否投射阴影
+
+// --- 分块剔除所需的新Buffer ---
+StructuredBuffer<AABB> _ChunkBoundsBuffer;              // 区块包围盒数据 Buffer
+StructuredBuffer<int> _InstancePrefabTypeIDs;           // [实例索引 -> 原型ID] 的映射
+StructuredBuffer<uint2> _ChunkInfos;                    // [区块ID -> {startIndex, count}] 的映射
+RWStructuredBuffer<int> _VisibleChunkFlags;             // [区块ID -> 是否可见(0或1)] 的映射
+
+// --- 核心工作与输出Buffer ---
+RWStructuredBuffer<SortingData> _SortingData;           // 读写：排序数据
+RWStructuredBuffer<uint> _ArgsBuffer;                   // 输出：间接绘制参数
+RWStructuredBuffer<uint> _IsVisibleBuffer;              // 输出：实例可见性标志
+RWStructuredBuffer<uint> _ShadowArgsBuffer;             // 输出：阴影绘制参数
+RWStructuredBuffer<uint> _ShadowIsVisibleBuffer;        // 输出：阴影可见性标志
+
+
+inline uint IsCameraOutsideObjBounds(float3 pos, float3 minPos, float3 maxPos)
+{
+    float boundsSize = distance(maxPos, minPos);
+    return ((distance(pos, maxPos) > boundsSize)
+            + (distance(pos, minPos) > boundsSize));
+}
+
+inline uint IsVisibleAfterFrustumCulling(float4 clipPos)
+{
+    return (clipPos.z > clipPos.w 
+            || clipPos.x < -clipPos.w 
+            || clipPos.x > clipPos.w 
+            || clipPos.y < -clipPos.w 
+            || clipPos.y > clipPos.w) 
+            ? 0 : 1;
+}
+
+inline uint IsVisibalAfterLodCulling(float minDisToCamera, float lodRange)
+{
+    return minDisToCamera < lodRange;
+}
+
+
+[numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
+void CSMain(uint3 _dispatchThreadID : SV_DispatchThreadID)
+{
+    uint tID = _dispatchThreadID.x;
+    SortingData sortingData = _SortingData[tID];
+    
+    // 1. 【获取全局实例索引】
+    // 直接使用 sortingData 的低16位作为实例在全局数组中的唯一ID。
+    uint globalInstanceIndex = sortingData.drawCallInstanceIndex & 0xFFFF;
+
+    // 2. 【分块剔除检查】
+    // 检查 _NumChunks 是为了兼容没有分块数据的旧资产，增加健壮性。
+    if (_NumChunks > 0)
+    {
+        // a. 通过二分查找，找到当前实例属于哪个区块。
+        //    这是一个在GPU上高效查找排序数组的经典算法。
+        uint chunkID = 0;
+        uint min_idx = 0;
+        uint max_idx = (uint)_NumChunks - 1;
+        
+        // 【删除】整个二分查找的 while 循环。
+        // 【修改】直接从预计算的 Buffer 中读取区块 ID
+        chunkID = _InstanceChunkIDs[globalInstanceIndex];
+
+        // b. 检查该区块的可见性标志 (这个标志由C#端的CPU粗剔除计算并上传)
+        if (_VisibleChunkFlags[chunkID] == 0)
+        {
+            // 如果区块不可见，则该区块内的所有实例都无需再检查。
+            // 直接将它们标记为不可见并退出，这是性能提升的关键！
+            _IsVisibleBuffer[tID] = 0;
+            _ShadowIsVisibleBuffer[tID] = 0;
+            return;
+        }
+    }
+    
+    // 3. 【获取原型ID和绘制参数】
+    // 如果通过了分块剔除，我们才继续进行昂贵的细剔除计算。
+    uint prefabTypeID = _InstancePrefabTypeIDs[globalInstanceIndex];
+    uint baseDrawCallArgsOffset = prefabTypeID * 15; // 每个原型占15个uint的args空间
+
+    // 4. 【初始化】
+    _IsVisibleBuffer[tID] = 0;
+    _ShadowIsVisibleBuffer[tID] = 0;
+
+    // 5. 【细剔除】(这部分逻辑与你原来版本几乎完全一样)
+    float4x4 _UNITY_MATRIX_M = _LocalToWorldMatrixsBuffer[globalInstanceIndex];
+    
+    LodViewRatio lodsViewRatio = _LodViewRatioBuffer[prefabTypeID];
+    InstanceData instance = _InstanceBoundsDataBuffer[prefabTypeID];
+    
+    // ... 所有包围盒顶点计算、视锥剔除、LOD计算逻辑 ...
+    float3 boundMin = instance.boundsCenter - instance.boundsExtents;
+    float3 boundMax = instance.boundsCenter + instance.boundsExtents;
+
+    float4 boundVerts[8];
+    boundVerts[0] = float4(boundMin.x, boundMin.y, boundMin.z, 1);
+    boundVerts[1] = float4(boundMax.x, boundMax.y, boundMax.z, 1);
+    boundVerts[2] = float4(boundMax.x, boundMax.y, boundMin.z, 1);
+    boundVerts[3] = float4(boundMax.x, boundMin.y, boundMax.z, 1);
+    boundVerts[4] = float4(boundMax.x, boundMin.y, boundMin.z, 1);
+    boundVerts[5] = float4(boundMin.x, boundMax.y, boundMax.z, 1);
+    boundVerts[6] = float4(boundMin.x, boundMax.y, boundMin.z, 1);
+    boundVerts[7] = float4(boundMin.x, boundMin.y, boundMax.z, 1);
+
+    float4x4 _UNITY_MATRIX_VP = mul(_UNITY_MATRIX_P, _UNITY_MATRIX_V);
+
+    float4 worldPos = mul(_UNITY_MATRIX_M, float4(0, 0, 0, 1));
+    float4 clipPos = mul(_UNITY_MATRIX_VP, worldPos);
+    float minDistanceToCamera = distance((float3)worldPos, _CamPosition.xyz);
+
+    _MaxDrawDistance = max(_MaxDrawDistance, 1);
+    if (minDistanceToCamera > _MaxDrawDistance) {
+        sortingData.distanceToCam = minDistanceToCamera;
+        _SortingData[tID] = sortingData;
+        return;
+    }
+
+    uint isInFrustum = IsVisibleAfterFrustumCulling(clipPos);
+    float3 boundMin2 = (float3)worldPos;
+    float3 boundMax2 = (float3)worldPos;
+
+    [unroll]
+    for (int i = 1; i < 8; i++)
+    {
+        worldPos = mul(_UNITY_MATRIX_M, boundVerts[i]);
+        clipPos = mul(_UNITY_MATRIX_VP, worldPos);
+        isInFrustum = saturate(isInFrustum + IsVisibleAfterFrustumCulling(clipPos));
+        minDistanceToCamera = min(distance((float3)worldPos, _CamPosition.xyz), minDistanceToCamera);
+        boundMin2 = min((float3)worldPos, boundMin2);
+        boundMax2 = max((float3)worldPos, boundMax2);
+    }
+
+    float3 boundSize2 = boundMax2 - boundMin2;
+    float maxSize = max(max(boundSize2.x, boundSize2.y), boundSize2.z);
+    float camAngle = radians(_CamFieldOfView * 0.5);
+    float camRatio = maxSize * 0.5 / tan(camAngle);
+    
+    float lod0Range = camRatio / lodsViewRatio.lod0Range;
+    float lod1Range = camRatio / lodsViewRatio.lod1Range;
+    float lod2Range = camRatio / lodsViewRatio.lod2Range;
+
+    uint isVisible = 1;
+    if (IsCameraOutsideObjBounds(_CamPosition, boundMin2, boundMax2))
+    {
+        isVisible *= _FrustumCull_On ? isInFrustum : 1;
+        isVisible *= (_LodCull_On * isVisible > 0) ? IsVisibalAfterLodCulling(minDistanceToCamera, lod2Range) : 1;
+    }
+
+    // 6. 【计算最终的ArgsBuffer索引】
+    uint argsIndex = baseDrawCallArgsOffset + 1; // 从该原型的第一个LOD的参数开始
+    argsIndex += 5 * (minDistanceToCamera > lod0Range);
+    argsIndex += 5 * (minDistanceToCamera > lod1Range);
+
+    // 7. 【更新所有输出Buffer】
+    uint shadowArgsIndex = argsIndex;
+    uint canCastShadow = _InstanceCastShadowBuffer[prefabTypeID];
+    canCastShadow *= (minDistanceToCamera < _ShadowDistance ? 1 : 0);
+    uint finalIsCastShadow = canCastShadow * isVisible;
+
+    sortingData.distanceToCam = minDistanceToCamera;
+    _SortingData[tID] = sortingData;
+
+    _IsVisibleBuffer[tID] = isVisible;
+    InterlockedAdd(_ArgsBuffer[argsIndex], isVisible);
+
+    _ShadowIsVisibleBuffer[tID] = finalIsCastShadow;
+    InterlockedAdd(_ShadowArgsBuffer[shadowArgsIndex], finalIsCastShadow);
+}
+
+
+
+// 【新增】CullChunks Kernel 实现
+[numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
+void CullChunks(uint3 id : SV_DispatchThreadID)
+{
+    uint chunkID = id.x;
+    if (chunkID >= (uint)_NumChunks)
+    {
+        return;
+    }
+
+    // 读取区块的包围盒
+    AABB chunkBounds = _ChunkBoundsBuffer[chunkID];
+    float3 center = chunkBounds.center;
+    float3 extents = chunkBounds.extents;
+
+    // 默认可见
+    int isVisible = 1;
+
+    // AABB 与 6 个视锥平面的相交测试
+    // 这是在 GPU 上进行视锥剔除的标准、高效算法
+    [unroll]
+    for (int i = 0; i < 6; i++)
+    {
+        float3 normal = _FrustumPlanes[i].xyz;
+        float planeDist = _FrustumPlanes[i].w;
+
+        // 计算包围盒在平面法线方向上的投影半径
+        float r = dot(extents, abs(normal));
+        // 计算包围盒中心到平面的距离
+        float d = dot(center, normal) + planeDist;
+
+        // 如果中心到平面的距离小于负的投影半径，则完全在平面背面，不可见
+        if (d < -r)
+        {
+            isVisible = 0;
+            break; // 一旦确定在某个平面外，就无需再测其他平面
+        }
+    }
+    
+    // 将结果写入标志 Buffer
+    _VisibleChunkFlags[chunkID] = isVisible;
+}

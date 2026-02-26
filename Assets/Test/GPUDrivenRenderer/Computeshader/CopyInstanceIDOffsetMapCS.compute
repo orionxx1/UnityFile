@@ -1,0 +1,45 @@
+#include "IndirectStructs.hlsl"
+
+#pragma kernel CSMain
+// #pragma enable_d3d11_debug_symbols
+
+#define THREAD_GROUP_SIZE_X 64
+#define THREAD_GROUP_SIZE_Y 1
+#define THREAD_GROUP_SIZE_Z 1
+
+#define VEGDATA_NUM 3
+
+cbuffer CB
+{
+    uint _InstanceIDOffsetMapRes;
+}
+
+StructuredBuffer<uint> _ArgsBuffer;
+RWTexture2D<float4> _InstanceIDOffsetMap;
+
+float EncodeIntRGBAFloat(uint i)
+{
+    float val = float((i & 0xFFFFFFFF) / 4294967295.0);
+    return val;
+}
+
+[numthreads(THREAD_GROUP_SIZE_X,THREAD_GROUP_SIZE_Y,THREAD_GROUP_SIZE_Z)]
+void CSMain (
+        in uint3 _dispatchThreadID : SV_DispatchThreadID,
+        in uint  _groupIndex       : SV_GroupIndex,
+        in uint3 _groupID          : SV_GroupID,
+        in uint3 _groupThreadID    : SV_GroupThreadID
+    )
+{
+    uint tID = _dispatchThreadID.x;
+
+    uint offset = _ArgsBuffer[tID * 5 + 4];
+    
+    int2 dataID;
+    dataID.x = tID % _InstanceIDOffsetMapRes;
+    dataID.y = tID / _InstanceIDOffsetMapRes;
+#if UNITY_UV_STARTS_AT_TOP
+    dataID.y = _InstanceIDOffsetMapRes - dataID.y;
+#endif
+    _InstanceIDOffsetMap[dataID] = EncodeIntRGBAFloat(offset);
+}

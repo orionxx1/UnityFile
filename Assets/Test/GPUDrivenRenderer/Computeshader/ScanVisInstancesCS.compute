@@ -1,0 +1,152 @@
+﻿// ======================================================================================
+//
+//        Scan Visible Instances (扫描可见实例) Compute Shader
+//
+// 目的: 
+// 这是两步并行前缀和算法的【第一步】。
+// 它的任务是，对Culling阶段生成的、巨大的 _IsVisibleBuffer (0/1掩码)进行处理。
+// 由于数据量太大，无法一次性完成，所以这个Shader只负责处理“组内”的计算。
+// C#端会Dispatch成千上万个线程组，每个线程组（例如128个线程）处理一小块数据（256个实例）。
+//
+// 它有两个关键输出:
+// 1. 告诉我们【每个线程组内部】的情况:
+//    - 每个可见实例在自己小组内的“排名”是多少 (e.g., "我是本组第3个可见的实例")。
+//    - 本小组一共有多少个可见实例。
+// 2. 为下一步(scanVisGroupSumCS)准备输入数据。
+//
+// 核心思想: 【分治】。将百万级实例的前缀和问题，分解成数千个“256个实例的前缀和”的小问题。
+//
+// 使用的算法: Blelloch Scan，和上一个Shader一样，也分为Reduction和Down-Sweep两个阶段。
+//
+// ======================================================================================
+
+#pragma kernel CSMain
+
+// --- Kernel配置 ---
+#define THREAD_GROUP_SIZE_X 128 // 每个线程组有128个线程
+// ...
+
+// --- C#传入的参数 ---
+cbuffer CB
+{
+    // 【高速缓存】使用共享内存来执行计算。
+    // 大小是线程组大小的两倍，因为每个线程要处理两个元素 (128 * 2 = 256)。
+    groupshared uint temp[2 * THREAD_GROUP_SIZE_X];
+}
+
+// --- 输入/输出 Buffer ---
+
+// 【输入】: 由Culling CS生成的，包含每个实例可见性标志(0或1)的巨大数组。
+StructuredBuffer<uint> _IsVisibleBuffer;
+
+// 【输出1】: 存储每个线程组内可见实例的【总数】。这个Buffer将作为下一步(scanVisGroupSumCS)的输入。
+RWStructuredBuffer<uint> _GroupSumArray;
+
+// 【输出2】: 存储了每个实例在其线程组内部的“局部排名”或“组内前缀和”。
+RWStructuredBuffer<uint> _ScannedInstanceVisibleBuffer;
+
+
+// ======================================================================================
+//
+//                          Kernel: CSMain (主执行函数)
+//
+// ======================================================================================
+[numthreads(THREAD_GROUP_SIZE_X, 1, 1)]
+void CSMain (
+        in uint3 _dispatchThreadID : SV_DispatchThreadID, // 线程全局ID (e.g., 0 to 1,000,000)
+        in uint  _groupIndex       : SV_GroupIndex,       // 线程在组内ID (e.g., 0 to 127)
+        in uint3 _groupID          : SV_GroupID,          // 线程组ID (e.g., 0 to N)
+        in uint3 _groupThreadID    : SV_GroupThreadID     // 与_groupIndex类似
+    )
+{
+    int tID = (int)_dispatchThreadID.x;      // 全局ID
+    int groupTID = (int)_groupThreadID.x; // 组内ID
+
+    // --- 1. 从主显存加载一小块数据(256个)到高速共享内存 ---
+    // 每个线程负责加载两个元素，这是并行算法中常见的内存带宽优化技巧。
+    int offset = 1;
+    temp[2 * groupTID]     = _IsVisibleBuffer[2 * tID];
+    temp[2 * groupTID + 1] = _IsVisibleBuffer[2 * tID + 1];
+
+    // --- 2. 【阶段一: Reduction (归约) / Up-Sweep (上扫)】 ---
+    // 在这256个元素的共享内存块中，自底向上地构建一棵求和树。
+    // 这个过程和你注释中的第一部分完全一样：
+    // // 0 1 2 3 4 5 6 7  (初始值)
+    // //   1   5   9   13 (d=4, 两两相加)
+    // //       6       22 (d=2, 间隔2相加)
+    // //               28 (d=1, 间隔4相加, 得到总和)
+    const int NoofElements = 2 * THREAD_GROUP_SIZE_X; // 也就是256
+    int d;
+    for (d = NoofElements >> 1; d > 0; d >>= 1)
+    {
+        // 同步点: 确保上一轮的所有加法都已完成。
+        GroupMemoryBarrierWithGroupSync();
+
+        // 只让一部分线程工作，避免重复计算。
+        if (groupTID < d)
+        {
+            int ai = offset * (2 * groupTID + 1) - 1;
+            int bi = offset * (2 * groupTID + 2) - 1;
+            // 将左侧节点的值，加到右侧节点上。
+            temp[bi] += temp[ai];
+        }
+        offset *= 2;
+    }
+
+    // --- 3. 【保存小组总和，并为下一步做准备】 ---
+    // 此时，temp[255] 中存储了这256个元素（即本组）的总和。
+    // 只有组内的第一个线程(groupTID == 0)负责执行这个操作。
+    if (groupTID == 0)
+    {
+        // 将本组的总和，写入到全局的 _GroupSumArray 中。
+        // _groupID.x 是当前线程组的ID，所以每个小组长都把自己的清点结果报告到对应的位置。
+        _GroupSumArray[_groupID.x] = temp[NoofElements - 1];
+        
+        // 【清零根节点】为接下来的Down-Sweep做准备。
+        temp[NoofElements - 1] = 0;
+    }
+
+    // --- 4. 【阶段二: Prefix Sum (前缀和) / Down-Sweep (下扫)】 ---
+    // 在这256个元素的共享内存块中，自顶向下地传递父节点的值，计算出最终的组内前缀和。
+    // 这个过程和你注释中的第二部分完全一样：
+    // // 0 1 2 6 4 9 6 0  (根节点清零后)
+    // // 0 1 2 0 4 9 6 6  (d=1, 向下传递)
+    // // 0 0 2 1 4 6 6 15 (d=2, ... )
+    // // 0 0 1 3 6 10 15 21 (d=4, 最终结果)
+    for (d = 1; d < NoofElements; d *= 2)
+    {
+        offset >>= 1;
+        
+        // 同步点: 确保上一轮的交换已完成。
+        GroupMemoryBarrierWithGroupSync();
+
+        if (groupTID < d)
+        {
+            int ai = offset * (2 * groupTID + 1) - 1;
+            int bi = offset * (2 * groupTID + 2) - 1;
+            
+            // 交换左右两个子节点的值，并将左子节点的值加到右子节点上。
+            int t = temp[ai];
+            temp[ai] = temp[bi];
+            temp[bi] += t;
+        }
+    }
+
+    // --- 5. 将最终的“组内排名”结果写回主显存 ---
+    // 同步点: 确保所有计算都已完成。
+    GroupMemoryBarrierWithGroupSync();
+
+    // 每个线程负责将共享内存中计算好的两个前缀和结果，写回到全局的输出Buffer。
+    _ScannedInstanceVisibleBuffer[2 * tID]     = temp[2 * groupTID];
+    _ScannedInstanceVisibleBuffer[2 * tID + 1] = temp[2 * groupTID + 1];
+}
+// 0 1 2 3 4 5 6 7
+//   1   5   9   13
+//       6       22
+//               28
+//0 1 2 6 4 9 6 28
+
+//0 1 2 6 4 9 6 0
+//0 1 2 0 4 9 6 6
+//0 0 2 1 4 6 6 15
+//0 0 1 3 6 10 15 21

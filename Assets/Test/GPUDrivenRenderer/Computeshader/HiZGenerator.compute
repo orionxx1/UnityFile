@@ -1,0 +1,39 @@
+// 文件名: HiZ_Generator.compute
+#pragma kernel CSMain
+
+// 输入: 上一级（更高分辨率）的Mip贴图
+Texture2D<float> _InputDepthTexture;
+
+// 输出: 当前要生成的（更低分辨率）的Mip贴图
+// 我们将整个Mipmap链绑定为一个可写入的纹理数组
+RWTexture2D<float> _OutputHiZTexture;
+
+// Unity在URP中会将深度值反转，1是近，0是远。
+// 所以我们要找的是最小值(min)，而不是最大值(max)。
+// 如果你用的是传统非反转深度，这里应该用max。
+#define Z_REVERSED 1
+
+[numthreads(8, 8, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    // 计算在输入纹理中对应的 2x2 像素区域的左上角坐标
+    uint2 read_coord = id.xy * 2;
+
+    // 读取 2x2 区域的4个深度值
+    float d0 = _InputDepthTexture.Load(int3(read_coord, 0)).r;
+    float d1 = _InputDepthTexture.Load(int3(read_coord + int2(1, 0), 0)).r;
+    float d2 = _InputDepthTexture.Load(int3(read_coord + int2(0, 1), 0)).r;
+    float d3 = _InputDepthTexture.Load(int3(read_coord + int2(1, 1), 0)).r;
+    
+    // 找出这4个值中的最远深度
+    #if Z_REVERSED
+        // 对于反转Z，最远的是最小值
+        float result = min(min(d0, d1), min(d2, d3));
+    #else
+        // 对于正常Z，最远的是最大值
+        float result = max(max(d0, d1), max(d2, d3));
+    #endif
+
+    // 将结果写入输出纹理的对应像素
+    _OutputHiZTexture[id.xy] = result;
+}
